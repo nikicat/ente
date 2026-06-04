@@ -26,6 +26,25 @@ func (c *Client) GetUserIdFromEmail(ctx context.Context, email string) (*models.
 	return &res, nil
 }
 
+func (c *Client) GetUserDetails(ctx context.Context, email string) (*models.AdminUserDetails, error) {
+	var res models.AdminUserDetails
+	r, err := c.restClient.R().
+		SetContext(ctx).
+		SetResult(&res).
+		SetQueryParam("email", email).
+		Get("/admin/user/")
+	if err != nil {
+		return nil, err
+	}
+	if r.IsError() {
+		return nil, &ApiError{
+			StatusCode: r.StatusCode(),
+			Message:    r.String(),
+		}
+	}
+	return &res, nil
+}
+
 func (c *Client) ListUsers(ctx context.Context) ([]models.User, error) {
 	var res struct {
 		Users []models.User `json:"users"`

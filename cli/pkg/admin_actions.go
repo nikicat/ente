@@ -44,6 +44,73 @@ func (c *ClICtrl) ListUsers(ctx context.Context, params model.AdminActionForUser
 	return nil
 }
 
+func (c *ClICtrl) GetUserDetails(ctx context.Context, params model.AdminActionForUser) error {
+	accountCtx, err := c.buildAdminContext(ctx, params.AdminEmail)
+	if err != nil {
+		return err
+	}
+	details, err := c.Client.GetUserDetails(accountCtx, params.UserEmail)
+	if err != nil {
+		if apiErr, ok := err.(*api.ApiError); ok && apiErr.StatusCode == 400 && strings.Contains(apiErr.Message, "Token is too old") {
+			fmt.Printf("Error: old admin token, please re-authenticate using `ente account add` \n")
+			return nil
+		}
+		return err
+	}
+
+	sub := details.Subscription
+	usage := details.Details
+
+	fmt.Printf("User\n")
+	fmt.Printf("  Email:    %s\n", details.User.Email)
+	fmt.Printf("  ID:       %d\n", details.User.ID)
+	if details.User.CreationTime > 0 {
+		fmt.Printf("  Created:  %s\n", time.UnixMicro(details.User.CreationTime).Format("2006-01-02 15:04:05"))
+	}
+
+	fmt.Printf("Usage\n")
+	fmt.Printf("  Used:     %s\n", utils.ByteCountDecimalGIB(usage.Usage))
+	if usage.FileCount != nil {
+		fmt.Printf("  Files:    %d\n", *usage.FileCount)
+	}
+	if usage.StorageBonus > 0 {
+		fmt.Printf("  Bonus:    %s\n", utils.ByteCountDecimalGIB(usage.StorageBonus))
+	}
+
+	fmt.Printf("Subscription\n")
+	fmt.Printf("  Plan:     %s\n", sub.ProductID)
+	fmt.Printf("  Storage:  %s\n", utils.ByteCountDecimalGIB(sub.Storage))
+	if sub.ExpiryTime > 0 {
+		fmt.Printf("  Expiry:   %s\n", time.UnixMicro(sub.ExpiryTime).Format("2006-01-02"))
+	}
+	if sub.PaymentProvider != "" {
+		fmt.Printf("  Provider: %s\n", sub.PaymentProvider)
+	}
+
+	if usage.FamilyData != nil && len(usage.FamilyData.Members) > 0 {
+		fmt.Printf("Family (storage %s)\n", utils.ByteCountDecimalGIB(usage.FamilyData.Storage))
+		for _, m := range usage.FamilyData.Members {
+			adminMarker := ""
+			if m.IsAdmin {
+				adminMarker = " (admin)"
+			}
+			fmt.Printf("  %s%s - %s [%s]\n", m.Email, adminMarker, utils.ByteCountDecimalGIB(m.Usage), m.Status)
+		}
+	}
+
+	fmt.Printf("Other\n")
+	fmt.Printf("  Auth codes:    %d\n", details.AuthCodes)
+	activeTokens := 0
+	for _, t := range details.Tokens {
+		if !t.IsDeleted {
+			activeTokens++
+		}
+	}
+	fmt.Printf("  Active tokens: %d\n", activeTokens)
+
+	return nil
+}
+
 func (c *ClICtrl) DeleteUser(ctx context.Context, params model.AdminActionForUser) error {
 	accountCtx, err := c.buildAdminContext(ctx, params.AdminEmail)
 	if err != nil {

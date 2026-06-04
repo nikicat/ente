@@ -36,6 +36,27 @@ var _userDetailsCmd = &cobra.Command{
 	},
 }
 
+var _getUserCmd = &cobra.Command{
+	Use:   "get-user",
+	Short: "Get detailed info for a user (usage, file count, subscription, etc.)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		recoverWithLog()
+		var flags = &model.AdminActionForUser{}
+		cmd.Flags().VisitAll(func(f *pflag.Flag) {
+			if f.Name == "admin-user" {
+				flags.AdminEmail = f.Value.String()
+			}
+			if f.Name == "user" {
+				flags.UserEmail = f.Value.String()
+			}
+		})
+		if flags.UserEmail == "" {
+			return fmt.Errorf("user email is required")
+		}
+		return ctrl.GetUserDetails(context.Background(), *flags)
+	},
+}
+
 var _disable2faCmd = &cobra.Command{
 	Use:   "disable-2fa",
 	Short: "Disable 2fa for a user",
@@ -164,6 +185,9 @@ func init() {
 	_ = _userDetailsCmd.MarkFlagRequired("user")
 	_userDetailsCmd.Flags().StringP("admin-user", "a", "", "The email of the admin user. ")
 	_userDetailsCmd.Flags().StringP("user", "u", "", "The email of the user to fetch details for. (required)")
+	_getUserCmd.Flags().StringP("admin-user", "a", "", "The email of the admin user. ")
+	_getUserCmd.Flags().StringP("user", "u", "", "The email of the user to fetch details for. (required)")
+	_ = _getUserCmd.MarkFlagRequired("user")
 	_listUsers.Flags().StringP("admin-user", "a", "", "The email of the admin user. ")
 	_disable2faCmd.Flags().StringP("admin-user", "a", "", "The email of the admin user. ")
 	_disable2faCmd.Flags().StringP("user", "u", "", "The email of the user to disable 2FA for. (required)")
@@ -176,5 +200,5 @@ func init() {
 	// add a flag with no value --no-limit
 	_updateFreeUserStorage.Flags().String("no-limit", "True", "When true, sets 100TB as storage limit, and expiry to current date + 100 years")
 	_sendMail.Flags().StringP("admin-user", "a", "", "The email of the admin user. ")
-	_adminCmd.AddCommand(_userDetailsCmd, _disable2faCmd, _disablePasskeyCmd, _updateFreeUserStorage, _listUsers, _deleteUser, _sendMail)
+	_adminCmd.AddCommand(_userDetailsCmd, _getUserCmd, _disable2faCmd, _disablePasskeyCmd, _updateFreeUserStorage, _listUsers, _deleteUser, _sendMail)
 }
