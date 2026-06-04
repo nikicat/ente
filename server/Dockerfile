@@ -1,5 +1,10 @@
-FROM golang:1.23.12-alpine3.22 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.12-alpine3.22 AS builder
 ENV CGO_ENABLED=0
+
+# Populated automatically by buildx; used to cross-compile natively on the
+# build host (no QEMU emulation) since this is a pure-Go, CGO-free build.
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /etc/ente/
 
@@ -9,7 +14,7 @@ RUN go mod download
 
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-  go build -trimpath -o museum cmd/museum/main.go
+  GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o museum cmd/museum/main.go
 
 FROM alpine:3.22
 COPY --from=builder /etc/ente/museum .

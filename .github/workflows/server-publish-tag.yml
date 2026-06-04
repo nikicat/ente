@@ -1,0 +1,40 @@
+name: "Publish on tag (server)"
+
+on:
+    push:
+        # Run when a tag matching the pattern "server-v*" is pushed, e.g.
+        # `server-v1.2.3` or `server-v1.2.3-test`. The pushed image is tagged
+        # with the same tag name.
+        tags:
+            - "server-v*"
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Compute image name (lowercase owner)
+              run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/museum" >> "$GITHUB_ENV"
+
+            - name: Log in to GHCR
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: printf '%s' "${GITHUB_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+            # No QEMU needed: the builder stage cross-compiles natively on the
+            # build host, and the final stage only COPYs the static binary.
+            - name: Build and push
+              run: |
+                  docker buildx create --use
+                  docker buildx build --push \
+                      --file server/Dockerfile \
+                      --platform linux/amd64,linux/arm64 \
+                      --build-arg GIT_COMMIT="${GITHUB_SHA}" \
+                      --tag "${IMAGE}:${GITHUB_REF_NAME}" \
+                      server
