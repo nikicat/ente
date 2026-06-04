@@ -27,6 +27,7 @@ import (
 	"github.com/ente-io/museum/pkg/utils/time"
 	"github.com/gin-contrib/requestid"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/ente-io/museum/pkg/utils/crypto"
 	"github.com/ente-io/stacktrace"
@@ -60,8 +61,19 @@ type AdminHandler struct {
 	StorageBonusCtl         *storagebonusCtrl.Controller
 }
 
-// Duration for which an admin's token is considered valid
-const AdminTokenValidityInMinutes = 10
+// Default duration (in minutes) for which an admin's token is considered
+// valid. Can be overridden via the "internal.admin-token-validity-minutes"
+// configuration.
+const DefaultAdminTokenValidityInMinutes = 10
+
+// adminTokenValidityInMinutes returns the configured admin token validity
+// duration in minutes, falling back to DefaultAdminTokenValidityInMinutes.
+func adminTokenValidityInMinutes() int64 {
+	if v := viper.GetInt64("internal.admin-token-validity-minutes"); v > 0 {
+		return v
+	}
+	return DefaultAdminTokenValidityInMinutes
+}
 
 func (h *AdminHandler) SendMail(c *gin.Context) {
 	var req ente.SendEmailRequest
@@ -206,7 +218,7 @@ func (h *AdminHandler) isFreshAdminToken(c *gin.Context) error {
 	if err != nil {
 		return err
 	}
-	if (creationTime + time.MicroSecondsInOneMinute*AdminTokenValidityInMinutes) < time.Microseconds() {
+	if (creationTime + time.MicroSecondsInOneMinute*adminTokenValidityInMinutes()) < time.Microseconds() {
 		err = ente.NewBadRequestError(&ente.ApiErrorParams{
 			Message: "Token is too old",
 		})
