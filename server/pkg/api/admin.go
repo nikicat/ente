@@ -683,7 +683,7 @@ func (h *AdminHandler) attachSubscription(ctx *gin.Context, userID int64, respon
 	if err == nil {
 		response["subscription"] = subscription
 	}
-	details, err := h.UserController.GetDetailsV2(ctx, userID, false, ente.Photos)
+	details, err := h.UserController.GetDetailsV2(ctx, userID, true, ente.Photos)
 	if err == nil {
 		response["details"] = details
 	}
