@@ -1,6 +1,10 @@
 name: "Test (server)"
 
 on:
+    push:
+        paths:
+            - "server/**"
+            - ".github/workflows/server-test.yml"
     pull_request:
         paths:
             - "server/**"
