@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import "package:photos/generated/l10n.dart";
 import "package:photos/l10n/l10n.dart";
-import "package:photos/utils/lock_screen_settings.dart";
+import "package:photos/settings/lock_screen_settings.dart";
 
 /// A widget which handles app lifecycle events for showing and hiding a lock screen.
 /// This should wrap around a `MyApp` widget (or equivalent).
@@ -126,13 +126,10 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
 
         switch (settings.name) {
           case '/lock-screen':
-            return PageRouteBuilder(
-              pageBuilder: (_, __, ___) => this._lockScreen,
-            );
+            return PageRouteBuilder(pageBuilder: (_, _, _) => this._lockScreen);
           case '/unlocked':
             return PageRouteBuilder(
-              pageBuilder: (_, __, ___) =>
-                  this.widget.builder(settings.arguments),
+              pageBuilder: (_, _, _) => this.widget.builder(settings.arguments),
             );
         }
         return null;

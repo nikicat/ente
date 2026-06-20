@@ -23,6 +23,8 @@ Use `npm ci` to install dependencies using the committed lockfile. You need this
 
 Use `npm install <package> --workspace <workspace>` only when intentionally adding or updating dependencies, and review the resulting `package.json` and `package-lock.json` changes.
 
+Installs skip dependency lifecycle scripts (`ignore-scripts` in `.npmrc`) so that installing cannot run arbitrary code from packages. The packages we use work fine without their lifecycle scripts: they either ship prebuilt binaries (e.g. `esbuild`, `sharp`) or fetch them on first use (`wasm-pack`). `save-exact` in `.npmrc` keeps newly added dependencies pinned to exact versions.
+
 ### npm run dev:\*
 
 Launch the app in development mode. There is one `npm run dev:foo` for each app, e.g. `npm run dev:auth`. `npm run dev` is a shortcut for `npm run dev:photos`.
@@ -46,7 +48,7 @@ The monorepo uses npm workspaces.
 To run a command for a workspace `<ws>`, invoke `npm exec --workspace <ws> -- <cmd>` from the root folder. For example, to start a development server for the `photos` app, we can do
 
 ```sh
-npm exec --workspace photos -- next dev
+npm exec --workspace photos -- next dev --webpack
 ```
 
 There is also a convenience alias, `npm run dev:photos`. See `package.json` for the full list of such aliases. The two common patterns are `dev:<app-name>` for running a local development server, and `build:<app-name>` for creating a production build.

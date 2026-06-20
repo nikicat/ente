@@ -273,7 +273,9 @@ Suggest deletion allows album owners and admins to suggest that other participan
 
 This is useful for curating shared albums after group trips or events by suggesting removal of blurry, duplicate, or unwanted shots.
 
-> **Note**: Suggest deletion is currently available on mobile apps only.
+> [!NOTE]
+>
+> Suggest deletion is currently available on mobile apps only.
 
 Learn more: [Collaboration guide](/photos/features/sharing-and-collaboration/collaboration#suggest-deletion)
 
@@ -288,7 +290,9 @@ Learn more: [Collaboration guide](/photos/features/sharing-and-collaboration/col
 
 The photos will be removed from the album immediately, and the photo owners will receive delete suggestions to review.
 
-> **Note**: Suggest deletion is currently available on mobile apps only.
+> [!NOTE]
+>
+> Suggest deletion is currently available on mobile apps only.
 
 ### How do I review delete suggestions? {#review-delete-suggestions}
 
@@ -305,7 +309,9 @@ For each suggestion, you can:
 
 The photo was already removed from the shared album when the suggestion was made. Accepting deletes the photo from your account. Rejecting keeps it in your account (but not in the album).
 
-> **Note**: Delete suggestions is currently available on mobile apps only.
+> [!NOTE]
+>
+> Delete suggestions is currently available on mobile apps only.
 
 Learn more: [Storage optimization guide](/photos/features/albums-and-organization/storage-optimization#delete-suggestions)
 
@@ -485,7 +491,9 @@ Ente creates a special album behind the scenes with the selected photos. Quick l
 
 Yes, on Ente's mobile, web, and desktop apps, you can add photos from an album that's shared with you into one of your own albums.
 
-**Important**: This creates a copy of the photo that you fully own, and it will count against your storage quota. This is different from just viewing shared photos, which doesn't use your storage.
+> [!IMPORTANT]
+>
+> This creates a copy of the photo that you fully own, and it will count against your storage quota. This is different from just viewing shared photos, which doesn't use your storage.
 
 The reason for creating copies is to avoid complications around ownership - if the original owner deletes the photo from their library, your copy remains safe in your account.
 
@@ -682,3 +690,44 @@ Embedded albums include:
 You can customize the embed size using iframe width/height attributes, including responsive sizing with percentages.
 
 See the [Embed feature guide](/photos/features/sharing-and-collaboration/embed) for customization examples.
+
+## Partner Sharing and Family Plans
+
+### Can I share my entire library with my partner like Google Photos Partner Sharing? {#partner-sharing}
+
+Not in a single click, but two steps give you the same outcome.
+
+**Step 1: Auto-share every new photo**
+
+Each of you shares your phone's camera folder with the other as admin or collaborator:
+
+1. Open Ente → Recents (or Camera on Android).
+2. Tap share → add your partner's Ente email as admin or collaborator.
+3. Have your partner do the same in reverse.
+
+From then on, every new photo either of you takes appears in both libraries automatically.
+
+**Step 2: Share past photos**
+
+1. Open Ente → Albums.
+2. Long-press an album to enter selection mode.
+3. Tap **All** at the bottom right to select every album.
+4. Tap share → add your partner's email as admin or collaborator.
+
+If you've both done a Google Takeout, only one of you should upload it to avoid duplicates.
+
+You can also use a single shared account if you prefer, where both phones upload to the same login. This means sharing one password and one recovery key.
+
+### Does a family plan share photos automatically between members? {#family-plan-photo-sharing}
+
+No. Family plans share storage only. Each member gets their own private space and cannot see other members' photos unless they explicitly share albums using Ente's sharing features. Tags, face labels, and ML learnings are not shared between members, and you cannot deduplicate across family accounts.
+
+### Can I change the initial shown on shared photos? {#shared-photo-initial}
+
+The initial comes from the saved contact name. If the contact isn't saved, Ente uses the first letter of their email address. Save the contact under the name you want and the initial will update.
+
+### A shared album contains Android Motion Photos that won't download on my iPhone. What can I do? {#android-motion-photos-iphone}
+
+Android Motion Photos and Apple Live Photos use different pairing formats, so saving an Android-origin motion photo into Apple Photos as a native Live Photo may fail.
+
+As a workaround, open the shared album link in a web browser and use the download option there. For motion photos, the web app downloads a ZIP containing the still image and the motion video as separate files. This preserves both parts, though importing them into Apple Photos as a native Live Photo may still not work automatically.

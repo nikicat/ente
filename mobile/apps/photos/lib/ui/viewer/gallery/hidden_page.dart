@@ -17,6 +17,7 @@ import "package:photos/models/selected_files.dart";
 import "package:photos/service_locator.dart";
 import "package:photos/services/collections_service.dart";
 import "package:photos/services/hidden_service.dart";
+import "package:photos/settings/local_settings.dart";
 import "package:photos/ui/collections/album/horizontal_list.dart";
 import "package:photos/ui/collections/collection_list_page.dart";
 import "package:photos/ui/common/loading_widget.dart";
@@ -29,7 +30,6 @@ import "package:photos/ui/viewer/gallery/gallery_app_bar_widget.dart";
 import "package:photos/ui/viewer/gallery/state/gallery_boundaries_provider.dart";
 import "package:photos/ui/viewer/gallery/state/gallery_files_inherited_widget.dart";
 import "package:photos/ui/viewer/gallery/state/selection_state.dart";
-import "package:photos/utils/local_settings.dart";
 
 class HiddenPage extends StatefulWidget {
   final String tagPrefix;
@@ -169,7 +169,13 @@ class _HiddenPageState extends State<HiddenPage> {
     if (_defaultHiddenCollectionId == null) {
       return const EnteLoadingWidget();
     }
+    final appBar = GalleryAppBarWidget.sliverConfig(
+      widget.appBarType,
+      AppLocalizations.of(context).hidden,
+      _selectedFiles,
+    );
     final gallery = Gallery(
+      appBar: appBar,
       asyncLoader: (creationStartTime, creationEndTime, {limit, asc}) {
         return FilesDB.instance.getFilesInCollections(
           [_defaultHiddenCollectionId!],
@@ -262,16 +268,6 @@ class _HiddenPageState extends State<HiddenPage> {
     return GalleryBoundariesProvider(
       child: GalleryFilesState(
         child: Scaffold(
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(
-              GalleryAppBarWidget.toolbarHeight,
-            ),
-            child: GalleryAppBarWidget(
-              widget.appBarType,
-              AppLocalizations.of(context).hidden,
-              _selectedFiles,
-            ),
-          ),
           body: SelectionState(
             selectedFiles: _selectedFiles,
             child: Stack(

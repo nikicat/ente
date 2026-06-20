@@ -356,7 +356,9 @@ Background sync allows Ente to automatically back up your photos without needing
 
 - Use [watch folders](/photos/faq/backup-and-sync#what-are-watch-folders) to automatically sync specific directories
 
-**Important**: On iOS, large videos may not upload in background - they'll sync when you open the app.
+> [!IMPORTANT]
+>
+> On iOS, large videos may not upload in background - they'll sync when you open the app.
 
 Learn more in the [Background sync feature guide](/photos/features/backup-and-sync/#background-sync).
 
@@ -379,7 +381,9 @@ If photos aren't automatically backing up in the background, try these solutions
 4. Don't force-quit the Ente app from the app switcher
 5. For initial large backups, keep the app open in foreground
 
-**Note**: On iOS, videos may not upload in the background due to size - they'll sync when you next open the app.
+> [!NOTE]
+>
+> On iOS, videos may not upload in the background due to size - they'll sync when you next open the app.
 
 Learn more in the [Background sync guide](/photos/features/backup-and-sync/#background-sync).
 
@@ -402,7 +406,9 @@ On iOS, background sync works through silent push notifications:
 - This wakes up the app and gives it 30 seconds to sync
 - Videos may not upload in background due to size limitations
 
-**Important**: If you force-kill the app from recents, iOS won't deliver push notifications and background sync will stop working.
+> [!IMPORTANT]
+>
+> If you force-kill the app from recents, iOS won't deliver push notifications and background sync will stop working.
 
 For large initial backups, keep the app open in foreground on iOS.
 
@@ -416,7 +422,9 @@ On Android, the app can run background processes more freely than iOS. However, 
 - Grant all required permissions
 - Don't force-close the app from recents
 
-**Note**: On Android 15+, if the app is in private space and private space is locked, background sync won't work.
+> [!NOTE]
+>
+> On Android 15+, if the app is in private space and private space is locked, background sync won't work.
 
 ## Desktop Backup (Watch Folders)
 
@@ -449,7 +457,9 @@ Yes. When you add a parent folder in Watch folders and choose **Separate albums*
 
 For example, if you have a `Photos` folder containing `Trip A` and `Trip B` subfolders, watching `Photos` in Separate albums mode creates two albums called "Trip A" and "Trip B".
 
-> **Note**: Ente albums are flat, not nested. All albums appear as top-level albums regardless of how your folders are structured on disk.
+> [!NOTE]
+>
+> Ente albums are flat, not nested. All albums appear as top-level albums regardless of how your folders are structured on disk.
 
 Learn more in the [Watch folders guide](/photos/features/backup-and-sync/watch-folders).
 
@@ -657,7 +667,19 @@ Yes, if the original photo is still available locally on your device or has alre
 
 Photos that exist only in the cloud need an internet connection to load in full quality.
 
+### Can I make Ente the default photo app on iOS? {#ente-default-ios}
+
+iOS doesn't let any third-party app replace Apple Photos as the system default. A few practical workarounds:
+
+- Share directly from Ente by opening the app, selecting photos, and tapping **Share**.
+- iOS learns from usage. The more you share via Ente, the higher it appears in the share sheet across other apps.
+- The iOS camera always saves to the system camera roll first. Ente auto-backs up from there.
+
 ## Exporting Your Data
+
+### Why does an export show more files than I have photos? {#export-more-files-than-photos}
+
+If the same photo or video is in multiple albums, the export includes a copy under each album folder. This is by design so each album folder is a self-contained collection. The number of unique files in your library is smaller than the total exported count.
 
 ### How do I import an Ente export back into Ente? {#import-ente-export}
 

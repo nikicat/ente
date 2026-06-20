@@ -92,6 +92,8 @@ class FlagService {
   bool get enableOnlyBackupFuturePhotos =>
       internalUser || _isServerFlagEnabled(_backupOptionsFlag);
 
+  bool get resetSplitReason => internalUser;
+
   bool get facesTimeline => true;
   bool get ritualsFlag => true;
 
@@ -129,6 +131,8 @@ class FlagService {
   bool get syncRecoveryDiagnostics => internalUser;
 
   bool get mLHydrationStaleFileRecovery => internalUser;
+
+  bool get enableMultiCast => internalUser;
 
   Future<void> tryRefreshFlags() async {
     try {

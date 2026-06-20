@@ -42,7 +42,6 @@ import "package:photos/ui/common/web_page.dart";
 import 'package:photos/ui/components/action_sheet_widget.dart';
 import 'package:photos/ui/components/buttons/button_widget.dart';
 import 'package:photos/ui/components/models/button_type.dart';
-import "package:photos/ui/components/popup_menu/ente_popup_menu_button.dart";
 import "package:photos/ui/map/map_screen.dart";
 import 'package:photos/ui/notification/toast.dart';
 import 'package:photos/ui/sharing/album_participants_page.dart';
@@ -50,6 +49,8 @@ import "package:photos/ui/sharing/manage_links_widget.dart";
 import 'package:photos/ui/sharing/share_collection_page.dart';
 import 'package:photos/ui/tools/free_space_page.dart';
 import "package:photos/ui/viewer/file/detail_page.dart";
+import "package:photos/ui/viewer/gallery/gallery_app_bar_actions.dart";
+import "package:photos/ui/viewer/gallery/gallery_app_bar_config.dart";
 import "package:photos/ui/viewer/gallery/hooks/add_photos_sheet.dart";
 import 'package:photos/ui/viewer/gallery/hooks/pick_cover_photo.dart';
 import "package:photos/ui/viewer/gallery/state/inherited_search_filter_data.dart";
@@ -62,12 +63,50 @@ import "package:uuid/uuid.dart";
 
 class GalleryAppBarWidget extends StatefulWidget {
   static const double toolbarHeight = kToolbarHeight;
-  static const double _controlRowHeight = 38.0;
-  static const double _actionGap = 8.0;
-  static const double _defaultBackIconSize = IconSizes.medium;
+  static const double _sliverExpandedHeight = 92.0;
 
-  static double hierarchicalPreferredHeight(BuildContext context) {
-    return toolbarHeight + AppBarFilterChips.preferredHeight(context);
+  static Color backgroundColor(BuildContext context) {
+    return getEnteColorScheme(context).backgroundColour;
+  }
+
+  static GalleryAppBarConfig sliverConfig(
+    GalleryType type,
+    String? title,
+    SelectedFiles selectedFiles, {
+    DeviceCollection? deviceCollection,
+    Collection? collection,
+    List<EnteFile>? files,
+  }) {
+    return GalleryAppBarConfig(
+      sliverBuilder: (_) => GalleryAppBarWidget._(
+        type,
+        title,
+        selectedFiles,
+        deviceCollection: deviceCollection,
+        collection: collection,
+        files: files,
+      ),
+      geometryBuilder: _resolveSliverGeometry,
+    );
+  }
+
+  static HeaderAppBarGeometry _resolveSliverGeometry(BuildContext context) {
+    final inheritedSearchFilterData = InheritedSearchFilterData.maybeOf(
+      context,
+    );
+    final isHierarchicalSearchable =
+        inheritedSearchFilterData?.isHierarchicalSearchable ?? false;
+    final bottomHeight = isHierarchicalSearchable
+        ? AppBarFilterChips.preferredHeight(context)
+        : 0.0;
+    return SliverAppBarComponent.resolveGeometry(
+      context,
+      subtitle: null,
+      expandedHeight: _sliverExpandedHeight,
+      collapsedHeight: toolbarHeight,
+      titleBuilderHeight: null,
+      bottomHeight: bottomHeight,
+    );
   }
 
   final GalleryType type;
@@ -75,17 +114,14 @@ class GalleryAppBarWidget extends StatefulWidget {
   final SelectedFiles selectedFiles;
   final DeviceCollection? deviceCollection;
   final Collection? collection;
-  final bool isFromCollectPhotos;
   final List<EnteFile>? files;
 
-  const GalleryAppBarWidget(
+  const GalleryAppBarWidget._(
     this.type,
     this.title,
     this.selectedFiles, {
-    super.key,
     this.deviceCollection,
     this.collection,
-    this.isFromCollectPhotos = false,
     this.files,
   });
 
@@ -125,7 +161,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
   late StreamSubscription _userAuthEventSubscription;
   late StreamSubscription<CollectionMetaEvent> _collectionMetaEventSubscription;
   late Function() _selectedFilesListener;
-  String? _appBarTitle;
+  late String _appBarTitle;
   late CollectionActions collectionActions;
   bool isQuickLink = false;
   late GalleryType galleryType;
@@ -153,7 +189,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         )
         .listen(stateRefresh);
 
-    _appBarTitle = widget.title;
+    _appBarTitle = widget.title ?? "";
     galleryType = widget.type;
     _checkIfICloudSharedAlbum();
   }
@@ -170,6 +206,14 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
       setState(() {
         _isICloudSharedAlbum = true;
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant GalleryAppBarWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.title != widget.title) {
+      _appBarTitle = widget.title ?? "";
     }
   }
 
@@ -194,106 +238,34 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
     final isHierarchicalSearchable =
         inheritedSearchFilterData?.isHierarchicalSearchable ?? false;
 
-    return galleryType == GalleryType.homepage
-        ? const SizedBox.shrink()
-        : isHierarchicalSearchable
-        ? ValueListenableBuilder(
-            valueListenable: inheritedSearchFilterData!
-                .searchFilterDataProvider!
-                .isSearchingNotifier,
-            child: PreferredSize(
-              preferredSize: Size.fromHeight(
-                AppBarFilterChips.preferredHeight(context),
-              ),
-              child: const AppBarFilterChips(),
-            ),
-            builder: (context, isSearching, child) {
-              return _buildAppBar(
-                context,
-                actions: isSearching ? const [] : _getDefaultActions(context),
-                bottom: child as PreferredSizeWidget,
-              );
-            },
-          )
-        : _buildAppBar(context, actions: _getDefaultActions(context));
-  }
+    if (galleryType == GalleryType.homepage) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
-  AppBar _buildAppBar(
-    BuildContext context, {
-    required List<Widget> actions,
-    PreferredSizeWidget? bottom,
-  }) {
-    final colors = context.componentColors;
+    if (!isHierarchicalSearchable) {
+      return _GallerySliverAppBar(
+        title: _appBarTitle,
+        actions: _getDefaultActions(context),
+      );
+    }
 
-    return AppBar(
-      elevation: 0,
-      centerTitle: false,
-      automaticallyImplyLeading: false,
-      toolbarHeight: GalleryAppBarWidget.toolbarHeight,
-      titleSpacing: 0,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-        child: SizedBox(
-          height: GalleryAppBarWidget._controlRowHeight,
-          child: Row(
-            children: [
-              const _GalleryAppBarBackButton(),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TooltipComponent(
-                    message: _appBarTitle!,
-                    child: Text(
-                      _appBarTitle!,
-                      style: TextStyles.h2.copyWith(color: colors.textBase),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ),
-              if (actions.isNotEmpty) ...[
-                const SizedBox(width: Spacing.md),
-                ..._actionsWithSpacing(actions),
-              ],
-            ],
-          ),
+    return ValueListenableBuilder(
+      valueListenable: inheritedSearchFilterData!
+          .searchFilterDataProvider!
+          .isSearchingNotifier,
+      child: PreferredSize(
+        preferredSize: Size.fromHeight(
+          AppBarFilterChips.preferredHeight(context),
         ),
+        child: const AppBarFilterChips(),
       ),
-      bottom: bottom,
-      surfaceTintColor: Colors.transparent,
-      backgroundColor: getEnteColorScheme(context).backgroundColour,
-    );
-  }
-
-  List<Widget> _actionsWithSpacing(List<Widget> actions) {
-    return [
-      for (var index = 0; index < actions.length; index++) ...[
-        SizedBox.square(
-          dimension: GalleryAppBarWidget._controlRowHeight,
-          child: Center(child: actions[index]),
-        ),
-        if (index != actions.length - 1)
-          const SizedBox(width: GalleryAppBarWidget._actionGap),
-      ],
-    ];
-  }
-
-  Widget _buildPopupMenuAction<T>({
-    required Widget icon,
-    required String tooltip,
-    required FutureOr<List<EntePopupMenuOption<T>>> Function() optionsBuilder,
-    required FutureOr<void> Function(T) onSelected,
-  }) {
-    return EntePopupMenuButton<T>(
-      optionsBuilder: optionsBuilder,
-      onSelected: onSelected,
-      elevation: 0,
-      child: Tooltip(
-        message: tooltip,
-        child: _GalleryAppBarIconButtonSurface(icon: icon),
-      ),
+      builder: (context, isSearching, child) {
+        return _GallerySliverAppBar(
+          title: _appBarTitle,
+          actions: isSearching ? const [] : _getDefaultActions(context),
+          bottom: child as PreferredSizeWidget,
+        );
+      },
     );
   }
 
@@ -326,7 +298,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
       textCapitalization: TextCapitalization.words,
       onSubmit: (String text) async {
         // indicates user cancelled the rename request
-        if (text == "" || text.trim() == _appBarTitle!.trim()) {
+        if (text == "" || text.trim() == _appBarTitle.trim()) {
           return;
         }
 
@@ -468,7 +440,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
 
     if (galleryType == GalleryType.magic) {
       actions.add(
-        _buildPopupMenuAction<AlbumPopupAction>(
+        galleryAppBarPopupMenuAction<AlbumPopupAction>(
           tooltip: strings.sort,
           icon: const HugeIcon(icon: HugeIcons.strokeRoundedFilterHorizontal),
           optionsBuilder: () {
@@ -512,7 +484,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
       );
     }
 
-    if (galleryType.isSharable() && !widget.isFromCollectPhotos) {
+    if (galleryType.isSharable()) {
       actions.add(
         IconButtonComponent(
           tooltip: strings.share,
@@ -538,7 +510,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
     }
 
     actions.add(
-      _buildPopupMenuAction<AlbumPopupAction>(
+      galleryAppBarPopupMenuAction<AlbumPopupAction>(
         tooltip: strings.more,
         icon: const HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical),
         optionsBuilder: () => _buildOverflowMenuOptions(
@@ -690,7 +662,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.rename,
           isQuickLink ? strings.convertToAlbum : strings.renameAlbum,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             isQuickLink
                 ? HugeIcons.strokeRoundedAlbum02
                 : HugeIcons.strokeRoundedPencilEdit01,
@@ -701,31 +673,31 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.setCover,
           strings.setCover,
-          _menuHugeIcon(HugeIcons.strokeRoundedImage01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedImage01, iconColor),
         ),
       if (galleryType.showMap())
         _menuOption(
           AlbumPopupAction.map,
           strings.map,
-          _menuHugeIcon(HugeIcons.strokeRoundedLocation01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedLocation01, iconColor),
         ),
       if (galleryType.canSort())
         _menuOption(
           AlbumPopupAction.sort,
           strings.sortAlbumsBy,
-          _menuHugeIcon(HugeIcons.strokeRoundedSorting01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedSorting01, iconColor),
         ),
       if (galleryType == GalleryType.uncategorized)
         _menuOption(
           AlbumPopupAction.cleanUncategorized,
           strings.cleanUncategorized,
-          _menuHugeIcon(HugeIcons.strokeRoundedClean, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedClean, iconColor),
         ),
       if (galleryType.canPin())
         _menuOption(
           AlbumPopupAction.pinAlbum,
           widget.collection!.isPinned ? strings.unpin : strings.pin,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             widget.collection!.isPinned
                 ? HugeIcons.strokeRoundedPinOff
                 : HugeIcons.strokeRoundedPin,
@@ -736,20 +708,20 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.editLocation,
           strings.editLocation,
-          _menuHugeIcon(HugeIcons.strokeRoundedLocation01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedLocation01, iconColor),
         ),
       if (galleryType == GalleryType.locationTag)
         _menuOption(
           AlbumPopupAction.deleteLocation,
           strings.deleteLocation,
-          _menuHugeIcon(HugeIcons.strokeRoundedDelete01, warning500),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedDelete01, warning500),
           labelColor: warning500,
         ),
       if (isArchived || (galleryType.canArchive() && !isHidden))
         _menuOption(
           AlbumPopupAction.ownedArchive,
           isArchived ? strings.unarchiveAlbum : strings.archiveAlbum,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             isArchived
                 ? HugeIcons.strokeRoundedUnarchive03
                 : HugeIcons.strokeRoundedArchive03,
@@ -760,7 +732,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.ownedHide,
           isHidden ? strings.unhide : strings.hide,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             isHidden
                 ? HugeIcons.strokeRoundedView
                 : HugeIcons.strokeRoundedViewOffSlash,
@@ -771,14 +743,15 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.galleryGuestView,
           strings.guestView,
-          _menuHugeIcon(HugeIcons.strokeRoundedIncognito, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedIncognito, iconColor),
         ),
       if (widget.collection != null && castService.isSupported)
         _menuOption(
           AlbumPopupAction.castAlbum,
           strings.castAlbum,
-          _menuHugeIcon(
-            castService.getActiveSessions().isNotEmpty
+          galleryAppBarMenuIcon(
+            !flagService.enableMultiCast &&
+                    castService.getActiveSessions().isNotEmpty
                 ? HugeIcons.strokeRoundedTvSmart
                 : HugeIcons.strokeRoundedTv02,
             iconColor,
@@ -788,13 +761,13 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.autoAddPhotos,
           hasAutoAddPeople ? strings.editAutoAddPeople : strings.autoAddPeople,
-          _menuHugeIcon(HugeIcons.strokeRoundedUserAdd01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedUserAdd01, iconColor),
         ),
       if (galleryType.canDelete())
         _menuOption(
           isQuickLink ? AlbumPopupAction.removeLink : AlbumPopupAction.delete,
           isQuickLink ? strings.removeLink : strings.deleteAlbum,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             isQuickLink
                 ? HugeIcons.strokeRoundedLinkBackward
                 : HugeIcons.strokeRoundedDelete01,
@@ -805,7 +778,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.shareePinAlbum,
           widget.collection!.hasShareePinned() ? strings.unpin : strings.pin,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             widget.collection!.hasShareePinned()
                 ? HugeIcons.strokeRoundedPinOff
                 : HugeIcons.strokeRoundedPin,
@@ -818,7 +791,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
           widget.collection!.hasShareeArchived()
               ? strings.unarchiveAlbum
               : strings.archiveAlbum,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             widget.collection!.hasShareeArchived()
                 ? HugeIcons.strokeRoundedUnarchive03
                 : HugeIcons.strokeRoundedArchive03,
@@ -829,7 +802,7 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.sharedHide,
           widget.collection!.hasShareeHidden() ? strings.unhide : strings.hide,
-          _menuHugeIcon(
+          galleryAppBarMenuIcon(
             widget.collection!.hasShareeHidden()
                 ? HugeIcons.strokeRoundedView
                 : HugeIcons.strokeRoundedViewOffSlash,
@@ -840,20 +813,20 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
         _menuOption(
           AlbumPopupAction.leave,
           strings.leaveAlbum,
-          _menuHugeIcon(HugeIcons.strokeRoundedLogout05, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedLogout05, iconColor),
         ),
       if (galleryType == GalleryType.localFolder && !_isICloudSharedAlbum)
         _menuOption(
           AlbumPopupAction.freeUpSpace,
           strings.freeUpDeviceSpace,
-          _menuHugeIcon(HugeIcons.strokeRoundedCleaningBucket, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedClean, iconColor),
         ),
       if (galleryType == GalleryType.sharedPublicCollection &&
           (widget.collection?.isDownloadEnabledForPublicLink() ?? false))
         _menuOption(
           AlbumPopupAction.downloadAlbum,
           strings.download,
-          _menuHugeIcon(HugeIcons.strokeRoundedDownload01, iconColor),
+          galleryAppBarMenuIcon(HugeIcons.strokeRoundedDownload01, iconColor),
         ),
     ];
   }
@@ -870,10 +843,6 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
       labelColor: labelColor,
       leadingWidget: leadingWidget,
     );
-  }
-
-  Widget _menuHugeIcon(List<List<dynamic>> icon, Color color) {
-    return HugeIcon(icon: icon, size: IconSizes.small, color: color);
   }
 
   Future<void> _downloadPublicAlbumToGallery(List<EnteFile>? files) async {
@@ -1171,23 +1140,28 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
 
   Future<void> _castChoiceDialog() async {
     final gw = CastGateway(NetworkClient.instance.enteDio);
-    if (castService.getActiveSessions().isNotEmpty) {
-      await showChoiceDialog(
-        context,
-        title: AppLocalizations.of(context).stopCastingTitle,
-        firstButtonLabel: AppLocalizations.of(context).yes,
-        secondButtonLabel: AppLocalizations.of(context).no,
-        body: AppLocalizations.of(context).stopCastingBody,
-        firstButtonOnTap: () async {
-          gw.revokeAllTokens().ignore();
-          await castService.closeActiveCasts();
-        },
-      );
-      return;
+
+    if (!flagService.enableMultiCast) {
+      if (castService.getActiveSessions().isNotEmpty) {
+        await showChoiceDialog(
+          context,
+          title: AppLocalizations.of(context).stopCastingTitle,
+          firstButtonLabel: AppLocalizations.of(context).yes,
+          secondButtonLabel: AppLocalizations.of(context).no,
+          body: AppLocalizations.of(context).stopCastingBody,
+          firstButtonOnTap: () async {
+            gw.revokeAllTokens().ignore();
+            await castService.closeActiveCasts();
+          },
+        );
+        return;
+      }
+      // stop any existing cast session
+      gw.revokeAllTokens().ignore();
+    } else {
+      await castService.closeActiveCasts();
     }
 
-    // stop any existing cast session
-    gw.revokeAllTokens().ignore();
     if (!Platform.isAndroid && !kDebugMode) {
       await _pairWithPin(gw, '');
     } else {
@@ -1343,60 +1317,26 @@ class _GalleryAppBarWidgetState extends State<GalleryAppBarWidget> {
   }
 }
 
-class _GalleryAppBarBackButton extends StatelessWidget {
-  const _GalleryAppBarBackButton();
+class _GallerySliverAppBar extends StatelessWidget {
+  const _GallerySliverAppBar({
+    required this.title,
+    required this.actions,
+    this.bottom,
+  });
+
+  final String title;
+  final List<Widget> actions;
+  final PreferredSizeWidget? bottom;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.componentColors;
-    final tooltip = MaterialLocalizations.of(context).backButtonTooltip;
-
-    return Semantics(
-      button: true,
-      label: tooltip,
-      child: Tooltip(
-        message: tooltip,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.maybePop(context),
-          child: SizedBox.square(
-            dimension: GalleryAppBarWidget._defaultBackIconSize,
-            child: Icon(
-              Icons.arrow_back,
-              color: colors.textBase,
-              size: GalleryAppBarWidget._defaultBackIconSize,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GalleryAppBarIconButtonSurface extends StatelessWidget {
-  const _GalleryAppBarIconButtonSurface({required this.icon});
-
-  final Widget icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.componentColors;
-
-    return SizedBox.square(
-      dimension: 36,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.fillLight,
-          borderRadius: BorderRadius.circular(Radii.md),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.sm),
-          child: IconTheme.merge(
-            data: IconThemeData(color: colors.textBase, size: IconSizes.small),
-            child: icon,
-          ),
-        ),
-      ),
+    return SliverAppBarComponent(
+      title: title,
+      actions: actions,
+      bottom: bottom,
+      expandedHeight: GalleryAppBarWidget._sliverExpandedHeight,
+      collapsedHeight: GalleryAppBarWidget.toolbarHeight,
+      backgroundColor: GalleryAppBarWidget.backgroundColor(context),
     );
   }
 }

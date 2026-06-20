@@ -186,12 +186,7 @@ Future<void> _init(bool bool, {String? via}) async {
     await Configuration.instance.init([LockerDB.instance]);
 
     await Network.instance.init(Configuration.instance);
-    await UserService.instance.init(
-      Configuration.instance,
-      const HomePage(),
-      clientPackageName: 'io.ente.locker',
-      passkeyRedirectUrl: 'entelocker://passkey',
-    );
+    await UserService.instance.init(Configuration.instance, const HomePage());
     await LockScreenSettings.instance.init(Configuration.instance);
     await CollectionApiClient.instance.init();
     await CollectionService.instance.init(preferences);
@@ -199,7 +194,7 @@ Future<void> _init(bool bool, {String? via}) async {
     await OfflineFilesService.instance.init();
     await LinksClient.instance.init();
     await LinksService.instance.init();
-    await ServiceLocator.instance.init(
+    ServiceLocator.instance.init(
       preferences,
       Network.instance.enteDio,
       Network.instance.getDio(),

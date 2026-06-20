@@ -11,6 +11,7 @@ import "package:photos/generated/l10n.dart";
 import 'package:photos/models/gallery_type.dart';
 import 'package:photos/models/selected_files.dart';
 import 'package:photos/ui/common/bottom_shadow.dart';
+import "package:photos/ui/components/empty_state_component.dart";
 import 'package:photos/ui/viewer/actions/file_selection_overlay_bar.dart';
 import 'package:photos/ui/viewer/gallery/gallery.dart';
 import 'package:photos/ui/viewer/gallery/gallery_app_bar_widget.dart';
@@ -36,8 +37,14 @@ class TrashPage extends StatelessWidget {
     final bool filesAreSelected = _selectedFiles.files.isNotEmpty;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final deleteAllButtonHeight = 40.0 + max(bottomPadding, 6.0) + 12.0;
+    final appBar = GalleryAppBarWidget.sliverConfig(
+      appBarType,
+      AppLocalizations.of(context).trash,
+      _selectedFiles,
+    );
 
     final gallery = Gallery(
+      appBar: appBar,
       asyncLoader: (creationStartTime, creationEndTime, {limit, asc}) {
         return TrashDB.instance.getTrashedFiles(
           creationStartTime,
@@ -58,21 +65,15 @@ class TrashPage extends StatelessWidget {
       selectedFiles: _selectedFiles,
       header: _headerWidget(),
       initialFiles: null,
+      emptyState: EmptyStateComponent(
+        assetPath: "assets/empty_state_trash.png",
+        title: AppLocalizations.of(context).deletedItemsStayHereForThirtyDays,
+      ),
     );
 
     return GalleryBoundariesProvider(
       child: GalleryFilesState(
         child: Scaffold(
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(
-              GalleryAppBarWidget.toolbarHeight,
-            ),
-            child: GalleryAppBarWidget(
-              appBarType,
-              AppLocalizations.of(context).trash,
-              _selectedFiles,
-            ),
-          ),
           body: SelectionState(
             selectedFiles: _selectedFiles,
             child: Stack(

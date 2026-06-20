@@ -25,11 +25,11 @@ class SearchSectionCTAIcon extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DottedBorder(
-                color: colorScheme.strokeFaint,
-                dashPattern: const [3.875, 3.875],
-                borderType: BorderType.Circle,
-                strokeWidth: 1.5,
-                radius: const Radius.circular(33.25),
+                options: CircularDottedBorderOptions(
+                  color: colorScheme.strokeFaint,
+                  dashPattern: const [3.875, 3.875],
+                  strokeWidth: 1.5,
+                ),
                 child: SizedBox(
                   width: 62.5,
                   height: 62.5,
@@ -63,22 +63,22 @@ class SearchSectionEmptyCTAIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sectionType.isCTAVisible == false) {
-      return const SizedBox(height: 115);
+      return const SizedBox.shrink();
     }
     final textTheme = getEnteTextTheme(context);
     final colorScheme = getEnteColorScheme(context);
     return GestureDetector(
       onTap: sectionType.ctaOnTap(context),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 14, 8, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Column(
           children: [
             DottedBorder(
-              color: colorScheme.strokeFaint,
-              dashPattern: const [3.875, 3.875],
-              borderType: BorderType.Circle,
-              strokeWidth: 1.5,
-              radius: const Radius.circular(33.25),
+              options: CircularDottedBorderOptions(
+                color: colorScheme.strokeFaint,
+                dashPattern: const [3.875, 3.875],
+                strokeWidth: 1.5,
+              ),
               child: SizedBox(
                 width: 62.5,
                 height: 62.5,

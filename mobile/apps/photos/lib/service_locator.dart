@@ -25,6 +25,7 @@ import "package:photos/services/backup_preference_service.dart";
 import "package:photos/services/collections_service.dart";
 import "package:photos/services/entity_service.dart";
 import "package:photos/services/filedata/filedata_service.dart";
+import "package:photos/services/install_source_service.dart";
 import "package:photos/services/location_service.dart";
 import "package:photos/services/machine_learning/compute_controller.dart";
 import "package:photos/services/machine_learning/face_ml/face_recognition_service.dart";
@@ -40,7 +41,8 @@ import "package:photos/services/text_embeddings_cache_service.dart";
 import "package:photos/services/update_service.dart";
 import "package:photos/services/wrapped/wrapped_cache_service.dart";
 import "package:photos/services/wrapped/wrapped_service.dart";
-import "package:photos/utils/local_settings.dart";
+import "package:photos/settings/backup_settings.dart";
+import "package:photos/settings/local_settings.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 class ServiceLocator {
@@ -50,13 +52,15 @@ class ServiceLocator {
   late final Dio downloadDio;
   late final PackageInfo packageInfo;
   late final EndpointConfig endpointConfig;
+  late final LocalSettings localSettings;
+  late final BackupSettings backupSettings;
 
   // instance
   ServiceLocator._privateConstructor();
 
   static final ServiceLocator instance = ServiceLocator._privateConstructor();
 
-  init(
+  void init(
     SharedPreferences prefs,
     Dio enteDio,
     Dio nonEnteDio,
@@ -69,6 +73,8 @@ class ServiceLocator {
     this.downloadDio = downloadDio;
     this.packageInfo = packageInfo;
     endpointConfig = EndpointConfig(prefs);
+    localSettings = LocalSettings(prefs);
+    backupSettings = BackupSettings(prefs);
   }
 }
 
@@ -91,11 +97,9 @@ CastService get castService {
   return _castService!;
 }
 
-LocalSettings? _localSettings;
-LocalSettings get localSettings {
-  _localSettings ??= LocalSettings(ServiceLocator.instance.prefs);
-  return _localSettings!;
-}
+LocalSettings get localSettings => ServiceLocator.instance.localSettings;
+
+BackupSettings get backupSettings => ServiceLocator.instance.backupSettings;
 
 /// Whether the app is currently showing the no-account local gallery experience.
 ///
@@ -283,6 +287,14 @@ WrappedCacheService? _wrappedCacheService;
 WrappedCacheService get wrappedCacheService {
   _wrappedCacheService ??= WrappedCacheService.instance;
   return _wrappedCacheService!;
+}
+
+InstallSourceService? _installSourceService;
+InstallSourceService get installSourceService {
+  _installSourceService ??= InstallSourceService(
+    ServiceLocator.instance.enteDio,
+  );
+  return _installSourceService!;
 }
 
 // Gateways

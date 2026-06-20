@@ -271,7 +271,9 @@ Common reasons and solutions:
 2. Ask your family member to cancel their existing subscription, then contact [support@ente.com](mailto:support@ente.com) so we can switch their account to the free plan.
 3. Once their account is on the free plan, add them via `Settings > Storage/Subscription > Manage subscription > Manage family`, or via `Settings > Account > Manage subscription`.
 
-> **Note**: Each family member gets their own private space. Members cannot see each other's files unless explicitly shared. Family plans are for sharing storage, not for sharing photos automatically.
+> [!NOTE]
+>
+> Each family member gets their own private space. Members cannot see each other's files unless explicitly shared. Family plans are for sharing storage, not for sharing photos automatically.
 
 ### How do I remove someone from my family plan? {#remove-family-member}
 
@@ -390,14 +392,6 @@ Earned storage will be accessible as long as your subscription is active, provid
 If you refer more paid customers than your current plan allows, the extra storage earned will be reserved. This reserved storage will become usable once you upgrade to a higher storage plan.
 
 For example, if you're on a 100 GB plan (max 100 GB earned storage) but refer 15 friends (150 GB worth), the extra 50 GB will be held in reserve until you upgrade to a plan that allows more referral storage.
-
-### Can referral credit be applied after signup? {#referral-credit-after-signup}
-
-No. Referral credits are only applied when a new account is created using the referral code during signup.
-
-If the person has not signed up yet, share your referral code before they create their account.
-
-Find your referral code in `Settings > Referrals`.
 
 ### What counts as abuse of the referral program? {#referral-abuse}
 
@@ -611,7 +605,9 @@ You can view and manage your payment method via Settings > click on the Storage 
 
 You can also access this via Settings > Account > Manage subscription > Manage payment method.
 
-**Note:** On iOS, the "Manage payment method" option is not available. iOS users must manage their subscriptions and payment methods through the Apple App Store.
+> [!NOTE]
+>
+> On iOS, the "Manage payment method" option is not available. iOS users must manage their subscriptions and payment methods through the Apple App Store.
 
 You will be able to see all of your previous invoices, with details regarding their payment status. In case of failed payments, you will also have an option to retry those charges.
 

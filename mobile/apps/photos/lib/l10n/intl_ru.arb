@@ -29,7 +29,6 @@
   "deleteReason4": "Моя причина не указана",
   "sendEmail": "Отправить электронное письмо",
   "deleteRequestSLAText": "Ваш запрос будет обработан в течение 72 часов.",
-  "deleteEmailRequest": "Пожалуйста, отправьте письмо на <warning>account-deletion@ente.com</warning> с вашей зарегистрированной электронной почты.",
   "entePhotosPerm": "Ente <i>требуется разрешение для</i> сохранения ваших фото",
   "ok": "Хорошо",
   "createAccount": "Создать аккаунт",
@@ -273,7 +272,6 @@
   "after1Month": "Через 1 месяц",
   "after1Year": "Через 1 год",
   "manageParticipants": "Управлять",
-  "collabLinkSectionDescription": "Создайте ссылку, чтобы люди могли добавлять и просматривать фото в вашем общем альбоме без использования приложения или аккаунта Ente. Это отлично подходит для сбора фото с мероприятий.",
   "collectPhotos": "Сбор фото",
   "collaborativeLink": "Совместная ссылка",
   "shareWithNonenteUsers": "Поделиться с пользователями, не использующими Ente",
@@ -400,7 +398,6 @@
   "creatingLink": "Создание ссылки...",
   "removeWithQuestionMark": "Удалить?",
   "removeParticipantBody": "{userEmail} будет удалён из этого общего альбома\n\nВсе фото, добавленные этим пользователем, также будут удалены из альбома",
-  "keepPhotos": "Оставить фото",
   "deletePhotos": "Удалить фото",
   "inviteToEnte": "Пригласить в Ente",
   "removePublicLink": "Удалить публичную ссылку",
@@ -408,6 +405,9 @@
   "sharing": "Отправка...",
   "youCannotShareWithYourself": "Вы не можете поделиться с самим собой",
   "archive": "Архив",
+  "@archive": {
+    "description": "Action of 'Archiving' an element"
+  },
   "createAlbumActionHint": "Нажмите и удерживайте, чтобы выбрать фото, и нажмите «+», чтобы создать альбом",
   "importing": "Импортирование...",
   "failedToLoadAlbums": "Не удалось загрузить альбомы",
@@ -1035,6 +1035,9 @@
   "moveToAlbum": "Переместить в альбом",
   "unhide": "Не скрывать",
   "unarchive": "Извлечь из архива",
+  "@unarchive": {
+    "description": "Action of 'Unarchiving' an element"
+  },
   "favorite": "В избранное",
   "removeFromFavorite": "Убрать из избранного",
   "shareMemories": "Поделиться воспоминаниями",

@@ -18,6 +18,7 @@ import "package:photos/models/search/search_constants.dart";
 import "package:photos/service_locator.dart";
 import "package:photos/services/machine_learning/face_ml/face_filtering/face_filtering_constants.dart";
 import "package:photos/services/search_service.dart";
+import "package:photos/settings/local_settings.dart";
 import "package:photos/theme/colors.dart";
 import "package:photos/theme/ente_theme.dart";
 import "package:photos/theme/text_style.dart";
@@ -27,7 +28,6 @@ import "package:photos/ui/components/searchable_appbar.dart";
 import "package:photos/ui/viewer/people/face_thumbnail_squircle.dart";
 import "package:photos/ui/viewer/people/person_face_widget.dart";
 import "package:photos/ui/viewer/people/save_or_edit_person.dart";
-import "package:photos/utils/local_settings.dart";
 import "package:photos/utils/people_sort_util.dart";
 
 class MergePersonSelectionResult {
@@ -267,7 +267,10 @@ class _MergeClustersToPersonPageState extends State<MergeClustersToPersonPage> {
                 child: Center(child: EnteLoadingWidget()),
               ),
             );
-            return CustomScrollView(slivers: slivers);
+            return CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: slivers,
+            );
           } else if (snapshot.hasError) {
             _logger.severe(
               "Failed to load persons for merge",
@@ -279,7 +282,10 @@ class _MergeClustersToPersonPageState extends State<MergeClustersToPersonPage> {
                 child: Center(child: Icon(Icons.error_outline_rounded)),
               ),
             );
-            return CustomScrollView(slivers: slivers);
+            return CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: slivers,
+            );
           }
 
           final persons = snapshot.data ?? [];
@@ -294,7 +300,10 @@ class _MergeClustersToPersonPageState extends State<MergeClustersToPersonPage> {
                 ),
               ),
             );
-            return CustomScrollView(slivers: slivers);
+            return CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: slivers,
+            );
           }
           final screenWidth = MediaQuery.of(context).size.width;
           final estimatedCount = (screenWidth / 100).floor();
@@ -349,7 +358,10 @@ class _MergeClustersToPersonPageState extends State<MergeClustersToPersonPage> {
               ),
             ),
           );
-          return CustomScrollView(slivers: slivers);
+          return CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: slivers,
+          );
         },
       ),
     );
@@ -673,11 +685,13 @@ class _AddNewPersonGridTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           DottedBorder(
-            color: colorScheme.strokeMuted,
-            strokeWidth: strokeWidth,
-            dashPattern: const [4, 4],
-            padding: EdgeInsets.zero,
-            customPath: faceThumbnailSquircleOuterPath,
+            options: CustomPathDottedBorderOptions(
+              customPath: faceThumbnailSquircleOuterPath,
+              color: colorScheme.strokeMuted,
+              strokeWidth: strokeWidth,
+              dashPattern: const [4, 4],
+              padding: EdgeInsets.zero,
+            ),
             child: SizedBox(
               height: innerSize,
               width: innerSize,

@@ -13,6 +13,7 @@ import 'package:photos/events/local_photos_updated_event.dart';
 import "package:photos/generated/l10n.dart";
 import 'package:photos/models/device_collection.dart';
 import "package:photos/service_locator.dart";
+import "package:photos/settings/local_settings.dart";
 import "package:photos/ui/collections/device/device_folder_list_item.dart";
 import "package:photos/ui/collections/device/device_folder_row_item.dart";
 import 'package:photos/ui/common/loading_widget.dart';
@@ -20,7 +21,6 @@ import 'package:photos/ui/components/searchable_appbar.dart';
 import "package:photos/ui/tabs/albums/empty_states/on_device_empty_state.dart";
 import 'package:photos/ui/viewer/gallery/empty_state.dart';
 import "package:photos/utils/device_collection_sort_util.dart";
-import "package:photos/utils/local_settings.dart";
 
 class DeviceFolderVerticalGridView extends StatefulWidget {
   final Widget? appTitle;
@@ -47,6 +47,7 @@ class _DeviceFolderVerticalGridViewState
     return Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: <Widget>[
           SearchableAppBar(
             title: widget.appTitle ?? const SizedBox.shrink(),

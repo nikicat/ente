@@ -16,7 +16,6 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:photos/core/configuration.dart';
 import 'package:photos/core/constants.dart';
 import 'package:photos/core/errors.dart';
-import "package:photos/extensions/lat_lng_extension.dart";
 import "package:photos/gateways/collections/models/metadata.dart";
 import "package:photos/models/ffmpeg/ffprobe_props.dart";
 import "package:photos/models/file/extensions/file_props.dart";
@@ -26,6 +25,7 @@ import "package:photos/models/location/location.dart";
 import "package:photos/models/metadata/file_magic.dart";
 import "package:photos/services/sync/local_sync_service.dart";
 import "package:photos/src/rust/api/motion_photo_api.dart";
+import "package:photos/utils/apple_photos_errors.dart";
 import "package:photos/utils/exif_util.dart";
 import 'package:photos/utils/file_util.dart';
 import "package:uuid/uuid.dart";
@@ -132,16 +132,26 @@ Future<MediaUploadData> _getMediaUploadDataFromAssetFile(
   if (Platform.isIOS) {
     trackOriginFetchForUploadOrML.put(file.localID!, true);
   }
-  sourceFile = await asset.originFile
-      .timeout(const Duration(seconds: 15))
-      .catchError((e) async {
-        if (e is TimeoutException) {
-          _logger.info("Origin file fetch timed out for " + file.tag);
-          return await asset.originFile;
-        } else {
-          throw e;
-        }
-      });
+  try {
+    sourceFile = await asset.originFile
+        .timeout(const Duration(seconds: 15))
+        .catchError((e) async {
+          if (e is TimeoutException) {
+            _logger.info("Origin file fetch timed out for " + file.tag);
+            return await asset.originFile;
+          } else {
+            throw e;
+          }
+        });
+  } catch (e) {
+    if (isPHPhotosNetworkError(e)) {
+      throw InvalidFileError(
+        phPhotosResourceUnavailableReason,
+        InvalidReason.photosResourceUnavailable,
+      );
+    }
+    rethrow;
+  }
   if (sourceFile == null || !sourceFile.existsSync()) {
     throw InvalidFileError(
       "id: ${file.localID}",
@@ -342,10 +352,11 @@ Future<void> _decorateEnteFileData(
   // h4ck to fetch location data if missing (thank you Android Q+) lazily only during uploads
   if (file.location == null ||
       (file.location!.latitude == 0 && file.location!.longitude == 0)) {
-    final location = (await asset.latlngAsync()).toEnteLocation();
-    if (location != null) {
-      file.location = location;
-    }
+    final latLong = await asset.latlngAsync();
+    file.location = Location(
+      latitude: latLong.latitude,
+      longitude: latLong.longitude,
+    );
   }
   if (!file.hasLocation && file.isVideo && Platform.isAndroid) {
     final FFProbeProps? props = await getVideoPropsAsync(sourceFile);

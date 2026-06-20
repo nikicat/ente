@@ -11,10 +11,10 @@
 //! # Overview
 //!
 //! ## Key Generation
-//! - [`keys::generate_key`] - Generate a 256-bit key for SecretBox encryption
-//! - [`keys::generate_stream_key`] - Generate a key for SecretStream encryption
-//! - [`keys::generate_keypair`] - Generate a public/private key pair
-//! - [`keys::generate_salt`] - Generate a salt for key derivation
+//! - [`Key::generate`] - Generate a 256-bit symmetric key
+//! - [`SecretKey::generate`] - Generate an X25519 secret key (public key via
+//!   [`SecretKey::public_key`])
+//! - [`Salt::generate`] - Generate a salt for key derivation
 //!
 //! ## Key Derivation
 //! - [`argon::derive_key`] - Derive a key from password using Argon2id
@@ -38,397 +38,38 @@
 //! ```rust
 //! use ente_core::crypto;
 //!
-//! // Initialize crypto backend (no-op for the pure Rust backend)
-//! crypto::init().unwrap();
-//!
 //! // Generate a key and encrypt some data
-//! let key = crypto::keys::generate_key();
+//! let key = crypto::Key::generate();
 //! let plaintext = b"Hello, World!";
 //!
 //! // SecretBox encryption (for independent data)
-//! let encrypted = crypto::secretbox::encrypt(plaintext, &key).unwrap();
-//! let decrypted = crypto::secretbox::decrypt_box(&encrypted, &key).unwrap();
+//! let encrypted = crypto::secretbox::encrypt(plaintext, &key);
+//! let decrypted = encrypted.decrypt(&key).unwrap();
 //! assert_eq!(decrypted, plaintext);
 //!
 //! // Blob encryption (for metadata)
-//! let key = crypto::keys::generate_stream_key();
 //! let encrypted = crypto::blob::encrypt(plaintext, &key).unwrap();
-//! let decrypted = crypto::blob::decrypt(&encrypted.encrypted_data, &encrypted.decryption_header, &key).unwrap();
+//! let decrypted = encrypted.decrypt(&key).unwrap();
 //! assert_eq!(decrypted, plaintext);
 //! ```
 
-use base64::{
-    Engine,
-    engine::general_purpose::{STANDARD as BASE64, URL_SAFE as BASE64_URL_SAFE},
-};
-use std::{
-    fmt,
-    ops::{Deref, DerefMut},
-};
-use zeroize::Zeroize;
-
+mod encoding;
 mod error;
+mod secret;
+mod types;
 
-// Pure Rust implementation
-mod impl_pure;
+pub mod argon;
+pub mod blob;
+pub mod hash;
+pub mod kdf;
+pub mod sealed;
+pub mod secretbox;
+pub mod stream;
 
-// Re-export the pure Rust implementation
-pub use impl_pure::*;
-
+pub use encoding::{
+    b64_to_hex, base642bin, decode_b64, decode_b64_url_safe_no_padding, decode_hex, encode_b64,
+    encode_b64_url_safe, encode_b64_url_safe_no_padding, encode_hex, hex_to_b64, str_to_bin,
+};
 pub use error::{CryptoError, Result};
-
-/// A heap-allocated byte buffer for sensitive material.
-///
-/// `SecretVec` zeroizes its contents on drop and requires an explicit
-/// [`SecretVec::into_vec`] when crossing out of the trusted Rust layer.
-#[repr(transparent)]
-#[derive(Default, Eq, PartialEq, Hash)]
-pub struct SecretVec(Vec<u8>);
-
-impl SecretVec {
-    /// Wrap a byte vector so it is zeroized on drop.
-    pub fn new(value: Vec<u8>) -> Self {
-        Self(value)
-    }
-
-    /// Explicitly unwrap the secret bytes when crossing a trust boundary.
-    pub fn into_vec(mut self) -> Vec<u8> {
-        std::mem::take(&mut self.0)
-    }
-}
-
-impl fmt::Debug for SecretVec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("[REDACTED]")
-    }
-}
-
-impl Deref for SecretVec {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_slice()
-    }
-}
-
-impl DerefMut for SecretVec {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut_slice()
-    }
-}
-
-impl AsRef<[u8]> for SecretVec {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_slice()
-    }
-}
-
-impl AsMut<[u8]> for SecretVec {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.0.as_mut_slice()
-    }
-}
-
-impl From<Vec<u8>> for SecretVec {
-    fn from(value: Vec<u8>) -> Self {
-        Self::new(value)
-    }
-}
-
-impl Zeroize for SecretVec {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
-    }
-}
-
-impl Drop for SecretVec {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-/// A heap-allocated string for sensitive material.
-///
-/// `SecretString` zeroizes its contents on drop and requires an explicit
-/// [`SecretString::into_string`] when crossing out of the trusted Rust layer.
-#[repr(transparent)]
-#[derive(Default, Eq, PartialEq, Hash)]
-pub struct SecretString(String);
-
-impl SecretString {
-    /// Wrap a string so it is zeroized on drop.
-    pub fn new(value: String) -> Self {
-        Self(value)
-    }
-
-    /// Explicitly unwrap the secret string when crossing a trust boundary.
-    pub fn into_string(mut self) -> String {
-        std::mem::take(&mut self.0)
-    }
-}
-
-impl fmt::Debug for SecretString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("[REDACTED]")
-    }
-}
-
-impl Deref for SecretString {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_str()
-    }
-}
-
-impl DerefMut for SecretString {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut_str()
-    }
-}
-
-impl AsRef<str> for SecretString {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl From<String> for SecretString {
-    fn from(value: String) -> Self {
-        Self::new(value)
-    }
-}
-
-impl Zeroize for SecretString {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
-    }
-}
-
-impl Drop for SecretString {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-/// Decode a base64 string to bytes.
-///
-/// # Arguments
-/// * `input` - Base64 encoded string.
-///
-/// # Returns
-/// The decoded bytes.
-pub fn decode_b64(input: &str) -> Result<Vec<u8>> {
-    Ok(BASE64.decode(input)?)
-}
-
-/// Encode bytes to a base64 string.
-///
-/// This is standard base64 (RFC 4648 §4), matching libsodium's
-/// `sodium_base64_VARIANT_ORIGINAL`.
-///
-/// # Arguments
-/// * `input` - Bytes to encode.
-///
-/// # Returns
-/// Base64 encoded string.
-pub fn encode_b64(input: &[u8]) -> String {
-    BASE64.encode(input)
-}
-
-/// Decode a base64 string to bytes.
-///
-/// Alias for [`decode_b64`], matching libsodium's `base642bin()` naming.
-pub fn base642bin(input: &str) -> Result<Vec<u8>> {
-    decode_b64(input)
-}
-
-/// Encode bytes to a base64 string.
-///
-/// Matches libsodium's `bin2base64()` naming.
-///
-/// When `url_safe` is true, this uses the URL-safe alphabet (RFC 4648 §5),
-/// matching libsodium's `sodium_base64_VARIANT_URLSAFE` and Go's
-/// `base64.URLEncoding`.
-pub fn bin2base64(input: &[u8], url_safe: bool) -> String {
-    if url_safe {
-        BASE64_URL_SAFE.encode(input)
-    } else {
-        BASE64.encode(input)
-    }
-}
-
-/// Convert a UTF-8 string to bytes.
-///
-/// # Arguments
-/// * `input` - UTF-8 string.
-///
-/// # Returns
-/// UTF-8 bytes.
-pub fn str_to_bin(input: &str) -> Vec<u8> {
-    input.as_bytes().to_vec()
-}
-
-/// Decode a hex string to bytes.
-///
-/// # Arguments
-/// * `input` - Hex encoded string.
-///
-/// # Returns
-/// The decoded bytes.
-pub fn decode_hex(input: &str) -> Result<Vec<u8>> {
-    Ok(hex::decode(input)?)
-}
-
-/// Encode bytes to a hex string.
-///
-/// # Arguments
-/// * `input` - Bytes to encode.
-///
-/// # Returns
-/// Hex encoded string (lowercase).
-pub fn encode_hex(input: &[u8]) -> String {
-    hex::encode(input)
-}
-
-/// Convert a base64 string to hex.
-///
-/// # Arguments
-/// * `b64` - Base64 encoded string.
-///
-/// # Returns
-/// Hex encoded string.
-pub fn b64_to_hex(b64: &str) -> Result<String> {
-    let bytes = decode_b64(b64)?;
-    Ok(encode_hex(&bytes))
-}
-
-/// Convert a hex string to base64.
-///
-/// # Arguments
-/// * `hex_str` - Hex encoded string.
-///
-/// # Returns
-/// Base64 encoded string.
-pub fn hex_to_b64(hex_str: &str) -> Result<String> {
-    let bytes = decode_hex(hex_str)?;
-    Ok(encode_b64(&bytes))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_init() {
-        // Should not panic
-        init().unwrap();
-        // Safe to call multiple times
-        init().unwrap();
-    }
-
-    #[test]
-    fn test_base64_roundtrip() {
-        let original = b"Hello, World!";
-        let encoded = encode_b64(original);
-        let decoded = decode_b64(&encoded).unwrap();
-        assert_eq!(decoded, original);
-    }
-
-    #[test]
-    fn test_hex_roundtrip() {
-        let original = b"Hello, World!";
-        let encoded = encode_hex(original);
-        let decoded = decode_hex(&encoded).unwrap();
-        assert_eq!(decoded, original);
-    }
-
-    #[test]
-    fn test_b64_to_hex() {
-        let original = b"Test";
-        let b64 = encode_b64(original);
-        let hex = b64_to_hex(&b64).unwrap();
-        assert_eq!(hex, "54657374"); // "Test" in hex
-    }
-
-    #[test]
-    fn test_hex_to_b64() {
-        let hex = "54657374"; // "Test" in hex
-        let b64 = hex_to_b64(hex).unwrap();
-        let decoded = decode_b64(&b64).unwrap();
-        assert_eq!(decoded, b"Test");
-    }
-
-    #[test]
-    fn test_str_to_bin_ascii() {
-        let bytes = str_to_bin("Hello");
-        assert_eq!(bytes, b"Hello");
-    }
-
-    #[test]
-    fn test_str_to_bin_unicode() {
-        let bytes = str_to_bin("✓");
-        assert_eq!(bytes, vec![0xE2, 0x9C, 0x93]);
-    }
-
-    #[test]
-    fn test_invalid_base64() {
-        let result = decode_b64("not valid base64!!!");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_invalid_hex() {
-        let result = decode_hex("not valid hex!!!");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_secret_vec_zeroize_clears_buffer() {
-        // Verify that calling zeroize() (which Drop invokes) zeroes the
-        // buffer while we still own the memory — no UB from reading freed
-        // allocations.
-        let mut secret = SecretVec::new(vec![0xABu8; 64]);
-        assert!(secret.iter().any(|&b| b != 0), "precondition: non-zero");
-        secret.zeroize();
-        assert!(
-            secret.iter().all(|&b| b == 0),
-            "SecretVec buffer was not zeroed by zeroize()"
-        );
-    }
-
-    #[test]
-    fn test_secret_vec_into_vec_preserves_contents() {
-        let secret = SecretVec::new(vec![0xCDu8; 32]);
-        let vec = secret.into_vec();
-        // The extracted vec should still have the original contents
-        assert!(vec.iter().all(|&b| b == 0xCD));
-    }
-
-    #[test]
-    fn test_secret_vec_into_vec_leaves_empty_inner() {
-        // After into_vec(), the SecretVec's inner buffer is empty, so
-        // Drop won't zeroize the extracted data — that's the caller's
-        // responsibility now.
-        let secret = SecretVec::new(vec![0xEFu8; 16]);
-        let vec = secret.into_vec();
-        assert_eq!(vec.len(), 16);
-        // No panic on implicit drop of the now-empty SecretVec
-    }
-
-    #[test]
-    fn test_secret_vec_debug_redacts() {
-        let secret = SecretVec::new(vec![42u8; 16]);
-        let debug = format!("{:?}", secret);
-        assert_eq!(debug, "[REDACTED]");
-        assert!(!debug.contains("42"));
-    }
-
-    #[test]
-    fn test_secret_vec_deref_and_len() {
-        let secret = SecretVec::new(vec![1, 2, 3]);
-        assert_eq!(secret.len(), 3);
-        assert_eq!(&*secret, &[1, 2, 3]);
-        assert_eq!(secret.as_ref(), &[1, 2, 3]);
-    }
-}
+pub use secret::{SecretString, SecretVec};
+pub use types::{Header, Key, Nonce, PublicKey, Salt, SecretKey, random_bytes};

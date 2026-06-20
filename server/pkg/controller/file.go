@@ -104,7 +104,7 @@ func (c *FileController) validateFileCreateOrUpdateReq(userID int64, file ente.F
 			return stacktrace.Propagate(err, "")
 		}
 		if ente.App(collection.App) != app {
-			return stacktrace.Propagate(ente.ErrInvalidApp, fmt.Sprintf("ctx app is different from collection app=%s collectionApp=%s", app, collection.App))
+			return stacktrace.Propagate(ente.ErrInvalidApp, "ctx app is different from collection app=%s collectionApp=%s", app, collection.App)
 		}
 		// Verify that user owns the collection.
 		// Warning: Do not remove this check
@@ -151,11 +151,11 @@ func (c *FileController) Create(ctx *gin.Context, userID int64, file ente.File, 
 
 	if fileResult.err != nil {
 		log.Error("Could not find size of file: " + file.File.ObjectKey)
-		return file, stacktrace.Propagate(ente.ErrObjSizeFetchFailed, fileResult.err.Error())
+		return file, stacktrace.Propagate(ente.ErrObjSizeFetchFailed, "%v", fileResult.err)
 	}
 	if thumbResult.err != nil {
 		log.Error("Could not find size of thumbnail: " + file.Thumbnail.ObjectKey)
-		return file, stacktrace.Propagate(ente.ErrObjSizeFetchFailed, thumbResult.err.Error())
+		return file, stacktrace.Propagate(ente.ErrObjSizeFetchFailed, "%v", thumbResult.err)
 	}
 	fileSize := fileResult.size
 	thumbnailSize := thumbResult.size
@@ -385,49 +385,11 @@ func (c *FileController) GetUploadURLWithMetadata(ctx context.Context, userID in
 
 // GetFileURL verifies permissions and returns a presigned url to the requested file
 func (c *FileController) GetFileURL(ctx *gin.Context, userID int64, fileID int64) (string, error) {
-	if err := c.AccessCtrl.CanAccessFile(ctx, &access.CanAccessFileParams{
-		ActorUserID: userID,
-		FileIDs:     []int64{fileID},
-	}); err != nil {
-		return "", stacktrace.Propagate(err, "")
-	}
-	url, err := c.getSignedURLForType(ctx, fileID, ente.FILE)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			go c.CleanUpStaleCollectionFiles(userID, fileID)
-		}
-		return "", stacktrace.Propagate(err, "")
-	}
-	return url, nil
+	return c.getSignedURLForAccessibleObject(ctx, userID, fileID, ente.FILE)
 }
 
 // GetThumbnailURL verifies permissions and returns a presigned url to the requested thumbnail
 func (c *FileController) GetThumbnailURL(ctx *gin.Context, userID int64, fileID int64) (string, error) {
-	if err := c.AccessCtrl.CanAccessFile(ctx, &access.CanAccessFileParams{
-		ActorUserID: userID,
-		FileIDs:     []int64{fileID},
-	}); err != nil {
-		return "", stacktrace.Propagate(err, "")
-	}
-	url, err := c.getSignedURLForType(ctx, fileID, ente.THUMBNAIL)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			go c.CleanUpStaleCollectionFiles(userID, fileID)
-		}
-		return "", stacktrace.Propagate(err, "")
-	}
-	return url, nil
-}
-
-// GetFileURLUsingFusedLookup verifies permissions and returns a presigned URL
-// using the temporary fused access-check and object lookup path.
-func (c *FileController) GetFileURLUsingFusedLookup(ctx *gin.Context, userID int64, fileID int64) (string, error) {
-	return c.getSignedURLForAccessibleObject(ctx, userID, fileID, ente.FILE)
-}
-
-// GetThumbnailURLUsingFusedLookup verifies permissions and returns a presigned
-// URL using the temporary fused access-check and object lookup path.
-func (c *FileController) GetThumbnailURLUsingFusedLookup(ctx *gin.Context, userID int64, fileID int64) (string, error) {
 	return c.getSignedURLForAccessibleObject(ctx, userID, fileID, ente.THUMBNAIL)
 }
 
@@ -901,10 +863,8 @@ func (c *FileController) CleanupDeletedFiles() {
 	itemChan := make(chan repo.QueueItem, len(items))
 
 	// Start worker goroutines
-	for w := 0; w < 8; w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 8 {
+		wg.Go(func() {
 			for item := range itemChan {
 				func(item repo.QueueItem) {
 					defer func() {
@@ -915,7 +875,7 @@ func (c *FileController) CleanupDeletedFiles() {
 					c.cleanupDeletedFile(item)
 				}(item)
 			}
-		}()
+		})
 	}
 	// Send items to the channel
 	for _, item := range items {
